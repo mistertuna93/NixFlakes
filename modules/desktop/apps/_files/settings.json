@@ -1,0 +1,16 @@
+{
+  "[python]": {
+    "editor.formatOnType": true
+  },
+  "editor.fontFamily": "JuliaMono",
+  "editor.fontSize": 14,
+  "editor.inlineSuggest.enabled": true,
+  "editor.tabSize": 2,
+  "files.autoSave": "afterDelay",
+  "git.autofetch": true,
+  "nix.formatterPath": "alejandra",
+  "redhat.telemetry.enabled": true,
+  "security.workspace.trust.untrustedFiles": "open",
+  "workbench.colorTheme": "Tomorrow Night Dark",
+  "workbench.iconTheme": "material-icon-theme"
+}
