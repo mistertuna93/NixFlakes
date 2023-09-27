@@ -1,0 +1,35 @@
+;; pollers
+;; use start epoch as placeholder
+(defpoll time :interval "5s"
+              :initial '{"date": "Jan 1 1970", "hour": "00", "minute": "00"}'
+  `date +'{"date": "%b %d %Y", "hour": "%H", "minute": "%M"}'`)
+
+;; listeners
+;; initially the first workspace is focused and the only one active
+(deflisten workspaces_main :initial '[{"class":"workspace-visible","onclick":"swaysome focus 1","icon":"󰫈"},{"class":"workspace-inactive","onclick":"swaysome focus 2","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 3","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 4","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 5","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 6","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 7","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 8","icon":"󰋙"}]'
+  "scripts/sway-workspaces 11-18")
+(deflisten workspaces_side :initial '[{"class":"workspace-visible","onclick":"swaysome focus 1","icon":"󰫈"},{"class":"workspace-inactive","onclick":"swaysome focus 2","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 3","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 4","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 5","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 6","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 7","icon":"󰋙"},{"class":"workspace-inactive","onclick":"swaysome focus 8","icon":"󰋙"}]'
+  "scripts/sway-workspaces 21-28")
+;; initially unmuted, init both volumes at 50
+(deflisten volume :initial '{"audio": "50", "audio_icon": "󰋋", "mic": "50", "mic_icon": "󰍬"}'
+  "scripts/volume")
+;; initially assume no network connection
+(deflisten network :initial '{"ethernet_icon": "󰕑", "ethernet_tooltip": "ethernet disconnected", "wifi_icon": "󰖪", "wifi_tooltip": "wifi powered off"}'
+  "scripts/connman")
+;; bluetooth is powered on boot, no connections
+(deflisten bluetooth :initial '{ "icon": "", "tooltip": "disconnected", "audio_headset": "false" }'
+  "scripts/bluetooth")
+;; temporary cpu temp script until next eww release, set to 0 initially
+(deflisten cpu_temp :initial 0
+  "scripts/cpu-temp")
+
+;; hover states
+(defvar layout_hover false)
+(defvar launcher_hover false)
+(defvar stats_hover false)
+(defvar controls_hover false)
+(defvar tray_button_hover false)
+
+;; state vars
+(defvar layout_state "tiling")
+(defvar layout_icon "󰕴")

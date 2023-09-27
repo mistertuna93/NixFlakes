@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+# Set a wallpaper on Wayland compositors, or restore the one previously set.
+# Uses the location ~/.wallpaper
+
+# Requires: swaybg, coreutils, psmisc, wlr-randr, imagemagick, gawk, bc
+# Usage: set-wallpaper-wayland image <file> [<mode>]
+#        set-wallpaper-wayland image-span <file>
+#        set-wallpaper-wayland restore
+
+ctl=swaybg
+wallpaper_dir="$HOME/.wallpaper"
+wallpaper_settings="$HOME/.wallpaper/settings"
+
+if [ ! -d "$wallpaper_dir" ]; then
+  mkdir -p "$wallpaper_dir"
+fi
+
+if [ "$1" == "image" ]; then
+  if [ "$2" != '' ]; then
+    mode="fill"
+    if [ "$3" != '' ]; then mode="$3"; fi
+    # remove previous images
+    find "$wallpaper_dir" -name "*.jpg" -delete
+    # store settings
+    rm -f "$wallpaper_settings"
+    touch "$wallpaper_settings" && printf "%s\n" "$2:$mode" >> "$wallpaper_settings"
+    # set wallpaper
+    killall -q "$ctl"
+    "$ctl" -i "$2" -m "$mode" &
+  else
+    echo "error: no image provided"
+  fi
+elif [ "$1" == "image-span" ]; then
+  if [ "$2" != '' ]; then
+    rm -f "$wallpaper_settings"
+    touch "$wallpaper_settings"
+    # remove previous images
+    find "$wallpaper_dir" -name "*.jpg" -delete
+    # terminate current instances
+    killall -q "$ctl"
+    # get resolutions, positions and display names using wlr-randr
+    resolutions=$(wlr-randr | grep "current" | awk '{print $1}')
+    positions=$(wlr-randr | grep Position | awk '{print $2}')
+    displays=$(wlr-randr | grep "DP\|HDMI" | awk '{print $1}')
+    # calculate total width and max height
+    total_width=$(echo "$resolutions" | cut -d 'x' -f1 | paste -sd+ | bc)
+    max_height=$(echo "$resolutions" | cut -d 'x' -f2 | sort -n -r | head -n1)
+    # resize the image to ensure dimensions match the total width and height
+    resize_path="${wallpaper_dir}/resized.jpg"
+    convert -resize "${total_width}x${max_height}!" "$2" "$resize_path"
+    index=1
+    # iterate over the resolutions
+    while read -r res; do
+      if [ $index -gt 1 ]; then
+        printf "%s" "," >> "$wallpaper_settings"
+      fi
+      # get width, height, x, y, display
+      width="$(cut -d 'x' -f1 <<< "$res")"
+      height="$(cut -d 'x' -f2 <<< "$res")"
+      x=$(echo "$positions" | awk 'NR=='$index'' | cut -d ',' -f1)
+      y=$(echo "$positions" | awk 'NR=='$index'' | cut -d ',' -f2)
+      display=$(echo "$displays" | awk 'NR=='$index'')
+      # crop image using imagemagick
+      crop_path="${wallpaper_dir}/${width}x${height}.jpg"
+      convert -crop "${width}x${height}+${x}+${y}" "$resize_path" "$crop_path"
+      # store wallpaper paths
+      printf "%s" "$crop_path" >> "$wallpaper_settings"
+      # set wallpaper
+      "$ctl" -o "$display" -i "$crop_path" -m "fill" &
+      index=$(( index + 1 ))
+    done <<< "$resolutions"
+    # store settings
+    printf "%s\n" ":fill" >> "$wallpaper_settings"
+    # cleanup temp file
+    rm -f "$resize_path"
+  else
+    echo "error: no image provided"
+  fi
+elif [ "$1" == "restore" ]; then
+  if test -f "$wallpaper_settings"; then
+    # parse img path and mode
+    img_mode="$(cat "$wallpaper_settings")"
+    img="$(cut -d ':' -f1 <<< "$img_mode")"
+    mode="$(cut -d ':' -f2 <<< "$img_mode")"
+    # terminate previous
+    killall -q "$ctl"
+    # get display names and order using wlr-randr
+    displays=$(wlr-randr | grep "DP\|HDMI" | awk '{print $1}')
+    # check for delimiter for multiple wallpapers (image-span)
+    if [[ "$img" == *","* ]]; then
+      img1="$(cut -d ',' -f1 <<< "$img")"
+      display1=$(echo "$displays" | awk 'NR==1')
+      img2="$(cut -d ',' -f2 <<< "$img")"
+      display2=$(echo "$displays" | awk 'NR==2')
+      # set both wallpapers
+      "$ctl" -o "$display1" -i "$img1" -m "$mode" &
+      "$ctl" -o "$display2" -i "$img2" -m "$mode" &
+    else
+      # set regular wallpaper
+      "$ctl" -i "$img" -m "$mode" &
+    fi
+  else
+    echo "error: could not find $wallpaper_settings"
+  fi
+else
+  echo "error: undefined option: $1"
+fi
